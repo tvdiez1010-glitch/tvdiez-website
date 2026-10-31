@@ -63,10 +63,7 @@
             gap: 45px;
         }
 
-        /* ----------------------------------------------------
-           MECÁNICA DEL BALÓN DE FÚTBOL INTERACTIVO
-        ---------------------------------------------------- */
-        .soccer-ball {
+     .soccer-ball {
     position: fixed;
     bottom: 30px; /* Distancia del borde inferior */
     right: 30px;  /* Distancia del borde derecho */
@@ -86,7 +83,6 @@
     50% { transform: translateY(-15px); }
     100% { transform: translateY(0px); }
 }
-
         /* DISEÑO DEL LOGO (BRAND BADGE) */
         .logo-wrapper {
             display: inline-flex;
@@ -616,10 +612,7 @@
 </head>
 <body>
 
-    <!-- BALÓN DE FÚTBOL INTERACTIVO FLOTANTE -->
-    <div id="ball" class="soccer-ball"></div>
-
-    <div class="container">
+   
 
         <!-- HERO EDITORIAL CON LOGO PROTEGIDO -->
         <section class="hero-editorial wushh wushh-up" id="inicio">
@@ -965,52 +958,6 @@
                 wushhObserver.observe(el);
             });
 
-            // 2. Mecánica del Balón de Fútbol
-            const ball = document.getElementById('ball');
-            let mouseX = window.innerWidth / 2;
-            let mouseY = window.innerHeight / 2;
-            let ballX = mouseX;
-            let ballY = mouseY;
-            let targetScale = 1;
-            let currentScale = 1;
-            const speed = 0.12;       
-            const scaleSpeed = 0.15;  
-
-            document.addEventListener('mousemove', (e) => {
-                mouseX = e.clientX - 24;
-                mouseY = e.clientY - 24;
-            });
-
-            document.addEventListener('mouseleave', () => {
-                ball.style.opacity = '0';
-            });
-            document.addEventListener('mouseenter', () => {
-                ball.style.opacity = '1';
-            });
-
-            function animateBall() {
-                ballX += (mouseX - ballX) * speed;
-                ballY += (mouseY - ballY) * speed;
-                
-                ball.style.left = ballX + 'px';
-                ball.style.top = ballY + 'px';
-                
-                currentScale += (targetScale - currentScale) * scaleSpeed;
-                let rot = ballX + ballY;
-                
-                ball.style.transform = `rotate(${rot}deg) scale(${currentScale})`;
-                
-                requestAnimationFrame(animateBall);
-            }
-            animateBall();
-
-            document.addEventListener('mousedown', () => {
-                targetScale = 0.70; 
-            });
-            
-            document.addEventListener('mouseup', () => {
-                targetScale = 1;    
-            });
         });
     </script>
 
