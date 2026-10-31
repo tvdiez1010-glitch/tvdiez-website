@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DZ Football - Penalty Shootout Elite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header-container {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, #22c55e, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.4));
+        }
+
+        .subtitle {
+            margin: 5px 0 0 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        #game-wrapper {
+            position: relative;
+            padding: 8px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+        }
+
+        #game-container {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            cursor: none;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 1040px;
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 12px;
+            box-sizing: border-box;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .score-box {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .score-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-top: 3px;
+        }
+
+        .btn-restart {
+            margin-top: 15px;
+            padding: 12px 35px;
+            background: linear-gradient(135deg, #22c55e, #15803d);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>DZ FOOTBALL</h1>
+        <div class="subtitle">Penalty Shootout Pro</div>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas" width="1024" height="576"></canvas>
+        </div>
+    </div>
+
+    <div class="score-board">
+        <div class="score-box">
+            <div class="score-label">Goles</div>
+            <div id="goals" class="score-value">0</div>
+        </div>
+        <div class="score-box">
+            <div class="score-label">Atajadas de Kaelen</div>
+            <div id="saves" class="score-value" style="color: #ef4444;">0</div>
+        </div>
+        <div class="score-box">
+            <div class="score-label">Intentos</div>
+            <div id="shots" class="score-value" style="color: #a855f7;">5 / 5</div>
+        </div>
+    </div>
+
+    <button class="btn-restart" onclick="resetGame()">Nuevo Partido</button>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Recursos Gráficos
+        const stadiumImg = new Image();
+        stadiumImg.src = 'estadio.png'; 
+
+        const goalieImg = new Image();
+        goalieImg.src = 'portero.png'; // Hoja de sprites con 4 poses
+
+        const ballImg = new Image();
+        ballImg.src = 'balon.png'; 
+
+        let scoreGoals = 0;
+        let scoreSaves = 0;
+        let totalShots = 0;
+        let gameState = 'aiming';
+        let feedbackText = 'APUNTA Y CHUTA';
+        let feedbackColor = '#22c55e';
+        let shakeIntensity = 0;
+
+        let particles = [];
+
+        // Coordenadas
+        const ballStart = { x: 512, y: 450 }; 
+        let ball = { x: ballStart.x, y: ballStart.y, radius: 24, targetX: 512, targetY: 250, progress: 0, speed: 0.038 };
+        
+        // Bloqueado en el eje horizontal de la línea de gol (y: 285)
+        const goalieY = 285;
+        let goalie = { x: 512, y: goalieY, width: 220, height: 160, targetX: 512 }; 
+        let targetPos = { x: 512, y: 250 };
+
+        const goal = { x: 180, y: 175, width: 664, height: 155 }; 
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState === 'aiming') {
+                const rect = canvas.getBoundingClientRect();
+                targetPos.x = e.clientX - rect.left;
+                targetPos.y = e.clientY - rect.top;
+
+                if (targetPos.y > goal.y + goal.height - 15) targetPos.y = goal.y + goal.height - 15;
+                if (targetPos.y < goal.y + 15) targetPos.y = goal.y + 15;
+                if (targetPos.x < goal.x + 25) targetPos.x = goal.x + 25;
+                if (targetPos.x > goal.x + goal.width - 25) targetPos.x = goal.x + goal.width - 25;
+            }
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (gameState === 'aiming' && totalShots < 5) {
+                shootBall();
+            }
+        });
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 35; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    radius: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1,
+                    decay: 0.02
+                });
+            }
+        }
+
+        function shootBall() {
+            gameState = 'shooting';
+            ball.targetX = targetPos.x;
+            ball.targetY = targetPos.y;
+            ball.progress = 0;
+
+            const aiDecision = Math.random();
+            if (aiDecision > 0.35) {
+                // Va en la dirección del disparo de forma horizontal
+                goalie.targetX = targetPos.x;
+            } else {
+                // Lado opuesto
+                goalie.targetX = targetPos.x < 512 ? 512 + (Math.random() * 150) : 512 - (Math.random() * 150);
+            }
+        }
+
+        function checkResult() {
+            gameState = 'result';
+            totalShots++;
+            document.getElementById('shots').innerText = `${5 - totalShots} / 5`;
+
+            // Caja de colisión horizontal
+            const goalieLeft = goalie.x - goalie.width / 2.2;
+            const goalieRight = goalie.x + goalie.width / 2.2;
+
+            const saved = ball.x >= goalieLeft && ball.x <= goalieRight;
+
+            if (saved) {
+                scoreSaves++;
+                document.getElementById('saves').innerText = scoreSaves;
+                feedbackText = '¡KAELEN SILVA LA HA TAPADO!';
+                feedbackColor = '#ef4444';
+                createExplosion(ball.x, ball.y, '#ffffff'); 
+            } else {
+                scoreGoals++;
+                document.getElementById('goals').innerText = scoreGoals;
+                feedbackText = '¡GOOOOOL DE DZ FOOTBALL!';
+                feedbackColor = '#22c55e';
+                shakeIntensity = 12;
+                createExplosion(ball.x, ball.y, '#22c55e');
+            }
+
+            setTimeout(() => {
+                if (totalShots < 5) {
+                    resetRound();
+                } else {
+                    endGame();
+                }
+            }, 2500);
+        }
+
+        function resetRound() {
+            gameState = 'aiming';
+            ball.x = ballStart.x;
+            ball.y = ballStart.y;
+            ball.radius = 24;
+            ball.progress = 0;
+            goalie.x = 512;
+            feedbackText = 'APUNTA Y CHUTA';
+            feedbackColor = '#22c55e';
+        }
+
+        function endGame() {
+            if (scoreGoals >= 3) {
+                feedbackText = '¡VICTORIA PARA DZ!';
+                feedbackColor = '#22c55e';
+            } else {
+                feedbackText = 'EL MURO GANÓ EL ENCUENTRO';
+                feedbackColor = '#ef4444';
+            }
+        }
+
+        function resetGame() {
+            scoreGoals = 0;
+            scoreSaves = 0;
+            totalShots = 0;
+            document.getElementById('goals').innerText = '0';
+            document.getElementById('saves').innerText = '0';
+            document.getElementById('shots').innerText = '5 / 5';
+            resetRound();
+        }
+
+        function update() {
+            if (shakeIntensity > 0) shakeIntensity *= 0.9;
+
+            if (gameState === 'shooting') {
+                goalie.x += (goalie.targetX - goalie.x) * 0.16; 
+
+                ball.progress += ball.speed;
+                if (ball.progress >= 1) {
+                    ball.progress = 1;
+                    checkResult();
+                }
+
+                ball.x = ballStart.x + (ball.targetX - ballStart.x) * ball.progress;
+                ball.y = ballStart.y + (ball.targetY - ballStart.y) * ball.progress;
+                ball.radius = 24 - (14 * ball.progress);
+            } else if (gameState === 'aiming') {
+                goalie.x += (512 - goalie.x) * 0.08;
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.save();
+            if (shakeIntensity > 0.5) {
+                ctx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity);
+            }
+
+            // 1. DIBUJAR ESTADIO
+            if (stadiumImg.complete) {
+                ctx.drawImage(stadiumImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '20px "Orbitron"';
+                ctx.textAlign = 'center';
+                ctx.fillText('ERROR: Falta el archivo estadio.png en la carpeta.', 512, 288);
+            }
+
+            // 2. RECORTAR Y DIBUJAR SPRITE EXACTO DE COOPERACIÓN (Slicing Sprite Sheet)
+            if (goalieImg.complete && stadiumImg.complete) {
+                let spriteX = 0;
+                let spriteY = 0;
+                const sw = goalieImg.width / 2;
+                const sh = goalieImg.height / 2;
+
+                if (gameState === 'aiming' || gameState === 'result') {
+                    // Pose 1 (Top-Left): Parado en guardia
+                    spriteX = 0;
+                    spriteY = 0;
+                } else if (gameState === 'shooting') {
+                    const diffX = goalie.x - 512;
+                    if (Math.abs(diffX) < 30) {
+                        // Pose 4 (Bottom-Right): Atajada baja o al centro
+                        spriteX = sw;
+                        spriteY = sh;
+                    } else if (diffX < 0) {
+                        // Pose 3 (Bottom-Left): Lanzamiento a la izquierda
+                        spriteX = 0;
+                        spriteY = sh;
+                    } else {
+                        // Pose 2 (Top-Right): Lanzamiento a la derecha
+                        spriteX = sw;
+                        spriteY = 0;
+                    }
+                }
+
+                ctx.save();
+                ctx.translate(goalie.x, goalie.y);
+                ctx.drawImage(
+                    goalieImg, 
+                    spriteX, spriteY, sw, sh,     // Origen (Recorte del Sprite)
+                    -goalie.width / 2, -goalie.height / 2, goalie.width, goalie.height // Destino (Renderizado)
+                );
+                ctx.restore();
+            }
+
+            // 3. MIRA TÁCTICA
+            if (gameState === 'aiming' && stadiumImg.complete) {
+                ctx.beginPath();
+                ctx.arc(targetPos.x, targetPos.y, 16, 0, Math.PI * 2);
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(targetPos.x, targetPos.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+            }
+
+            // 4. BALÓN DZ CON GIRO 3D
+            if (stadiumImg.complete) {
+                if (gameState === 'shooting' || gameState === 'result') {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                    ctx.beginPath();
+                    ctx.ellipse(ball.x, 460 - (460 - ball.y) * 0.12, ball.radius * 1.4, ball.radius * 0.45, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.save();
+                ctx.translate(ball.x, ball.y);
+                if (gameState === 'shooting') {
+                    ctx.rotate(ball.progress * Math.PI * 5); 
+                }
+
+                if (ballImg.complete) {
+                    ctx.drawImage(ballImg, -ball.radius, -ball.radius, ball.radius * 2, ball.radius * 2);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // 5. PARTÍCULAS
+            for (let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // HUD
+            if (stadiumImg.complete) {
+                ctx.fillStyle = feedbackColor;
+                ctx.font = '900 28px "Orbitron"';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 6;
+                ctx.fillText(feedbackText, 512, 70);
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
