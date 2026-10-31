@@ -67,16 +67,25 @@
            MECÁNICA DEL BALÓN DE FÚTBOL INTERACTIVO
         ---------------------------------------------------- */
         .soccer-ball {
-            position: fixed;
-            width: 48px;
-            height: 48px;
-            background: url('https://img.icons8.com/color/96/000000/soccer-ball.png') no-repeat center;
-            background-size: contain;
-            pointer-events: none;
-            z-index: 99999;
-            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
-            transition: opacity 0.3s ease;
-        }
+    position: fixed;
+    bottom: 30px; /* Distancia del borde inferior */
+    right: 30px;  /* Distancia del borde derecho */
+    width: 60px;  /* Un poco más grande para que se vea bien */
+    height: 60px;
+    background: url('https://img.icons8.com/color/96/000000/soccer-ball.png') no-repeat center;
+    background-size: contain;
+    z-index: 99999;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+    cursor: pointer; /* Indica que es clickeable */
+    animation: float 3s ease-in-out infinite; /* Animación de flotar */
+}
+
+/* Animación para que flote */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+}
 
         /* DISEÑO DEL LOGO (BRAND BADGE) */
         .logo-wrapper {
